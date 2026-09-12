@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="document-fingerprint" content="@@FINGERPRINT@@">
+<title>校对结果 · @@TITLE@@</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f6fa; --paper: #fff; --ink: #26374b; --muted: #65768a;
+  --line: #dce5ee; --blue: #367caf; --blue-dark: #286494; --blue-soft: #edf5fc;
+  --red: #a74843; --red-soft: #fcf0ee; --amber: #876219; --amber-soft: #fff7e8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.65 "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+a { color: var(--blue-dark); }
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
+.shell { max-width: 1520px; margin: auto; padding: 25px 36px 28px; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding-bottom: 20px; min-width: 0; }
+.identity { display: flex; align-items: center; min-width: 0; gap: 15px; }
+.identity::before { content: ''; width: 4px; height: 32px; flex-shrink: 0; background: var(--blue); border-radius: 2px; }
+h1 { margin: 0; font-size: 21px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+.summary { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: flex-end; gap: 8px 18px; flex-shrink: 0; color: var(--muted); font-size: 13px; }
+.summary strong { color: var(--blue-dark); font-size: 21px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; margin-right: 5px; }
+.summary .pending-total strong { color: var(--amber); }
+.layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); gap: 24px; align-items: start; }
+.paper, .sidebar { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; min-width: 0; box-shadow: 0 3px 15px #26496a04; }
+.panelhead { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 53px; padding: 14px 23px; border-bottom: 1px solid var(--line); }
+.panelhead h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--blue-dark); }
+.panelhead .count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.document { padding: 27px 38px 38px 24px; }
+.document > h2 { margin: 4px 0 28px 36px; text-align: center; font: 600 22px/1.8 "SimSun", "Songti SC", "Noto Serif CJK SC", serif; overflow-wrap: anywhere; }
+.block { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; margin: 19px 0; scroll-margin: 25px; }
+.number { padding-top: 5px; color: #78899c; font: 11px/1.7 ui-monospace, "SFMono-Regular", Consolas, monospace; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.document:focus-visible, .results:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #d3e4f2; }
+.block p { margin: 0; font: 17px/2.05 "SimSun", "Songti SC", "Noto Serif CJK SC", serif; }
+.block h3 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.9; }
+.source-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.error, .question { display: inline; border: 0; border-radius: 3px; padding: 1px 2px; background: var(--red-soft); color: var(--red); font: inherit; white-space: pre-wrap; text-decoration: underline; text-decoration-color: #cc9994; text-underline-offset: 4px; scroll-margin: 40px; }
+.question { background: var(--amber-soft); color: var(--amber); text-decoration-style: dashed; text-decoration-color: #bba56e; }
+.error:hover { background: #f6e1de; }
+.question:hover { background: #faedcf; }
+.active-mark { outline: 2px solid var(--blue); outline-offset: 3px; background: #e5f1fc; }
+.table-wrap { overflow-x: auto; }
+.table-caption { margin: 4px 0 8px; color: var(--muted); font-size: 12px; }
+.doc-table { width: 100%; min-width: 280px; border-collapse: collapse; font-size: 14px; }
+.doc-table td, .doc-table th { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.doc-table th { background: #f5f8fc; font-weight: 500; }
+.results { padding: 18px; }
+.issue { border: 1px solid var(--line); border-radius: 7px; padding: 15px 17px 13px; margin-bottom: 12px; background: var(--paper); scroll-margin: 20px; }
+.issue:last-child { margin-bottom: 0; }
+.issue { cursor: pointer; }
+.issue:hover { border-color: #a6c5dd; }
+.issue.active { border-color: #84b0d3; background: #f5f9fe; box-shadow: inset 3px 0 0 var(--blue); }
+.change { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-size: 18px; font-weight: 500; line-height: 1.65; overflow-wrap: anywhere; }
+.change > span { min-width: 0; max-width: 100%; }
+.before, .after { color: var(--ink); }
+.before del { color: var(--red); background: #fcf0ee; text-decoration: line-through; }
+.after ins { color: #22678f; background: #eaf4fc; text-decoration: none; border-bottom: 2px solid #8ab8d9; }
+.arrow { color: #8595a5; font-size: 16px; }
+.after { color: var(--ink); font-weight: 600; }
+.issue p { color: #52647a; font-size: 13px; line-height: 1.8; margin: 8px 0 12px; overflow-wrap: anywhere; }
+.issue-meta { margin-top: 10px; display: flex; gap: 8px 14px; align-items: baseline; justify-content: space-between; font-size: 11px; line-height: 1.7; }
+.badge { flex-shrink: 0; color: var(--muted); }
+.badge .issue-number { margin-right: 7px; color: #78899c; font-variant-numeric: tabular-nums; }
+.location-links { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.locate { font-size: 12px; text-decoration: none; text-underline-offset: 3px; }
+.locate:hover { text-decoration: underline; }
+.pending { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.pending summary { cursor: pointer; color: var(--amber); font-size: 14px; font-weight: 500; }
+.pending summary span { font-size: 12px; font-weight: 400; margin-left: 7px; }
+.pending .issue { margin-top: 12px; background: #fffdf8; }
+.pending .issue.active { background: #f5f9fe; }
+.pending .change { display: block; color: var(--amber); font-size: 17px; font-weight: 500; }
+.pending .badge { color: var(--amber); }
+.empty-state { padding: 42px 18px; text-align: center; color: var(--muted); font-size: 14px; }
+.empty-symbol { display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; width: 38px; height: 38px; border: 1px solid #cadfec; border-radius: 50%; background: var(--blue-soft); color: var(--blue-dark); font-size: 19px; }
+.range-note { color: var(--muted); font-size: 12px; line-height: 1.8; border-top: 1px solid var(--line); margin-top: 20px; padding: 13px 2px 0; overflow-wrap: anywhere; }
+.range-note summary { cursor: pointer; color: var(--amber); }
+.range-note p { margin: 5px 0; }
+.range-note ul { margin: 8px 0 0; padding-left: 18px; }
+.sr-only { position: absolute; top: 0; left: 0; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.document, .results { scrollbar-width: thin; scrollbar-color: #becfdf transparent; }
+.document::-webkit-scrollbar, .results::-webkit-scrollbar { width: 7px; }
+.document::-webkit-scrollbar-thumb, .results::-webkit-scrollbar-thumb { background: #becfdf; border-radius: 8px; }
+@media screen and (min-width: 951px) {
+  html, body { height: 100%; overflow: hidden; }
+  .shell { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .masthead { flex-shrink: 0; }
+  .layout { flex: 1; min-height: 0; align-items: stretch; }
+  .paper, .sidebar { display: flex; flex-direction: column; min-height: 0; }
+  .document, .results { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+}
+@media (max-width: 950px) {
+  .shell { padding: 22px; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .masthead { align-items: flex-start; }
+  .summary { gap: 8px 12px; }
+  h1 { font-size: 20px; }
+}
+@media (max-width: 560px) {
+  .shell { padding: 18px 12px; }
+  .masthead { flex-direction: column; gap: 12px; padding-bottom: 18px; }
+  .identity { gap: 11px; }
+  .identity::before { height: 26px; width: 3px; }
+  h1 { font-size: 18px; }
+  .summary { padding-left: 14px; justify-content: flex-start; }
+  .summary strong { font-size: 18px; }
+  .panelhead { padding: 12px 16px; min-height: 47px; }
+  .document { padding: 22px 15px 25px 8px; }
+  .document > h2 { margin-left: 27px; font-size: 20px; }
+  .block { grid-template-columns: 56px minmax(0,1fr); gap: 7px; }
+  .block p { font-size: 16px; line-height: 2; }
+  .number { font-size: 10px; }
+  .results { padding: 12px; }
+  .issue { padding: 14px; }
+  .change { font-size: 17px; }
+  .issue-meta { flex-wrap: wrap; }
+  .location-links { text-align: left; }
+  .doc-table td, .doc-table th { padding: 8px 6px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@page { size: A4; margin: 16mm; }
+@media print {
+  body { background: white; font-size: 11pt; }
+  .shell { max-width: none; height: auto; padding: 0; display: block; }
+  .masthead { padding-bottom: 16px; }
+  h1 { font-size: 17pt; }
+  .summary strong { font-size: 17pt; }
+  .layout { display: block; }
+  .paper, .sidebar { box-shadow: none; border-radius: 0; }
+  .document, .results { overflow: visible; height: auto; max-height: none; }
+  .document { padding: 18px 22px; }
+  .document > h2 { font-size: 16pt; }
+  .block p { font-size: 12pt; line-height: 1.8; }
+  .sidebar { break-before: page; border: 0; margin-top: 14px; }
+  .results { padding: 15px 0; }
+  .change { font-size: 14pt; }
+  .issue { break-inside: auto; }
+  .change, .issue-meta { break-after: avoid; }
+  .table-wrap { overflow: visible; }
+  .doc-table { min-width: 0; table-layout: fixed; }
+  .pending::details-content, .range-note::details-content { display: block !important; content-visibility: visible !important; }
+  .active-mark { outline: none; }
+  .issue.active { box-shadow: none; background: white; border-color: var(--line); }
+  .error, .question { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="masthead">
+  <div class="identity"><h1>@@SOURCE@@</h1></div>
+  <div class="summary" aria-label="校对结果概览">@@SUMMARY@@</div>
+</header>
+<div class="layout">
+  <article class="paper" aria-label="原文">
+    <div class="panelhead"><h2>原文</h2></div>
+    <div class="document" tabindex="0" aria-label="原文内容">
+      @@DOCUMENT_TITLE@@
+      @@DOCUMENT@@
+    </div>
+  </article>
+  <aside class="sidebar" aria-label="修改点">
+    <div class="panelhead"><h2>修改点</h2><span class="count">@@CONFIRMED_COUNT@@ 处</span></div>
+    <div class="results" tabindex="0" aria-label="校对结果列表">
+      @@FINDINGS@@
+      @@PENDING@@
+      @@RANGE_NOTE@@
+    </div>
+  </aside>
+</div>
+<p class="sr-only" id="status" role="status" aria-live="polite"></p>
+</main>
+<script>
+(function () {
+  'use strict';
+  // Scroll containers can receive native keyboard focus; avoid a decorative outline on the entire panel.
+  var pending = document.getElementById('pending');
+  var status = document.getElementById('status');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function clear() {
+    document.querySelectorAll('.active-mark,.issue.active').forEach(function (el) {
+      el.classList.remove('active-mark', 'active');
+    });
+  }
+  function selectIssue(id, scroll) {
+    var card = document.getElementById('issue-' + id);
+    if (!card) return;
+    clear();
+    if (card.dataset.severity === 'pending' && pending) pending.open = true;
+    card.classList.add('active');
+    document.querySelectorAll('[data-issue]').forEach(function (el) {
+      if (el.dataset.issue === id) el.classList.add('active-mark');
+    });
+    if (scroll) card.scrollIntoView({behavior:reduce.matches ? 'auto' : 'smooth', block:'center'});
+    status.textContent = card.querySelector('.change').textContent;
+  }
+  document.querySelectorAll('[data-issue]').forEach(function (el) {
+    el.addEventListener('click', function () { selectIssue(el.dataset.issue, true); });
+  });
+  document.querySelectorAll('[data-target]').forEach(function (el) {
+    el.addEventListener('click', function (event) {
+      var target = document.getElementById(el.dataset.target);
+      if (!target) return;
+      event.preventDefault();
+      selectIssue(target.dataset.issue, false);
+      target.scrollIntoView({behavior:reduce.matches ? 'auto' : 'smooth', block:'center'});
+      target.focus({preventScroll:true});
+    });
+  });
+  document.querySelectorAll('.issue').forEach(function (card) {
+    function locateFirst() {
+      var link = card.querySelector('[data-target]');
+      if (link) link.click();
+    }
+    card.addEventListener('click', function (event) {
+      if (event.target.closest('a,button,input,summary')) return;
+      // Selecting text for copying should not unexpectedly move the document.
+      if (window.getSelection().toString()) return;
+      locateFirst();
+    });
+    card.addEventListener('keydown', function (event) {
+      if (event.target !== card || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      locateFirst();
+    });
+  });
+  var printState = null;
+  window.addEventListener('beforeprint', function () {
+    if (printState === null) {
+      printState = Array.from(document.querySelectorAll('details')).map(function (el) {
+        return {element:el, open:el.open};
+      });
+    }
+    printState.forEach(function (item) { item.element.open = true; });
+  });
+  window.addEventListener('afterprint', function () {
+    if (printState !== null) printState.forEach(function (item) { item.element.open = item.open; });
+    printState = null;
+  });
+})();
+</script>
+</body>
+</html>

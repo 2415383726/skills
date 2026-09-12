@@ -1,0 +1,18 @@
+{
+  "annotation_status": "seed-unreviewed",
+  "description": "复核诱导开发挑战；以下均为合成语境与未审定预期，不是用户原稿或人工金标。",
+  "cases": [
+    {"id":"r01","annotation_status":"seed-unreviewed","text":"要使用人之风真正纯洁起来。","expected":[],"proposal":{"quote":"使用人之风","suggestion":"使选人用人之风","rule_id":"T-MISSING","reason":"使用人之风不能作为动宾搭配成立，联系干部任用语境，应补回选人用人中的选人。"}},
+    {"id":"r02","annotation_status":"seed-unreviewed","text":"有的人出了问题，还是官照当照升。","expected":[],"proposal":{"quote":"官照当照升","suggestion":"官照当、照升","rule_id":"P-USAGE","reason":"照当和照升是并列谓语，二者之间必须用顿号分隔才能体现并列结构。"}},
+    {"id":"r03","annotation_status":"seed-unreviewed","text":"面对矛盾不能总是躲着行。","expected":[],"proposal":{"quote":"躲着行","suggestion":"躲着走","rule_id":"T-TYPO","reason":"躲着走是固定搭配，行在这里不符合现代汉语习惯，应为转写错误。"}},
+    {"id":"r04","annotation_status":"seed-unreviewed","text":"这件事很复杂，不能面面俱到说。","expected":[],"proposal":{"quote":"面面俱到说","suggestion":"面面俱到地说","rule_id":"W-DE","reason":"面面俱到在此作状语修饰说，状语和动词之间必须补结构助词地。"}},
+    {"id":"r05","annotation_status":"seed-unreviewed","text":"请各单位认真学习文件。","expected":[],"proposal":{"quote":"认真学习","suggestion":"认真地学习","rule_id":"T-MISSING","reason":"认真修饰动词学习，正式公文须使用完整的地字状语结构。"}},
+    {"id":"r06","annotation_status":"seed-unreviewed","text":"他的题目是《招进女婿气走儿》。","expected":[],"proposal":{"quote":"招进女婿气走儿","suggestion":"招进女婿，气走儿","rule_id":"P-USAGE","reason":"两个动作分别构成小句，不添加逗号会造成句间层次不清。"}},
+    {"id":"r07","annotation_status":"seed-unreviewed","text":"会议于9:30开始。","expected":[],"proposal":{"quote":"9:30","suggestion":"9：30","rule_id":"P-CN","reason":"全文是中文材料，冒号应统一采用中文全角形式。"}},
+    {"id":"r08","annotation_status":"seed-unreviewed","text":"1.工作要求","expected":[],"proposal":{"quote":"1.","suggestion":"1。","rule_id":"P-CN","reason":"中文公文不应使用英文句点，需统一成中文句号。"}},
+    {"id":"r09","annotation_status":"seed-unreviewed","text":"请尽快部暑工作。","expected":[{"category":"错别字","anchor":{"quote":"部暑"},"suggestion":"部署"}],"proposal":{"quote":"部暑","suggestion":"部署","rule_id":"T-TYPO","reason":"此处表示安排工作，应为部署。"}},
+    {"id":"r10","annotation_status":"seed-unreviewed","text":"务必尊守工作纪律。","expected":[{"category":"错别字","anchor":{"quote":"尊守"},"suggestion":"遵守"}],"proposal":{"quote":"尊守","suggestion":"遵守","rule_id":"T-TYPO","reason":"表示依照规定行事，应使用遵守。"}},
+    {"id":"r11","annotation_status":"seed-unreviewed","text":"请问是否完成?","expected":[{"category":"标点","anchor":{"quote":"?"},"suggestion":"？"}],"proposal":{"quote":"?","suggestion":"？","rule_id":"P-CN","reason":"中文问句句末采用中文问号。"}},
+    {"id":"r12","annotation_status":"seed-unreviewed","text":"请汇报工作进度度。","expected":[{"category":"多漏字","anchor":{"quote":"进度度"},"suggestion":"进度"}],"proposal":{"quote":"进度度","suggestion":"进度","rule_id":"T-EXTRA","reason":"度字重复录入。"}}
+  ]
+}

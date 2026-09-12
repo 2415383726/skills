@@ -1,0 +1,11 @@
+{
+  "T-TYPO": {"requires_necessity": false},
+  "T-EXTRA": {"requires_necessity": true},
+  "T-MISSING": {"requires_necessity": true},
+  "P-CN": {"requires_necessity": false},
+  "P-PAIR": {"requires_necessity": false},
+  "P-USAGE": {"requires_necessity": false},
+  "N-CONSISTENCY": {"requires_necessity": false},
+  "W-DO": {"requires_necessity": false},
+  "W-DE": {"requires_necessity": true}
+}

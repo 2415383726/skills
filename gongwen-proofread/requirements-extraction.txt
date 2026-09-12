@@ -1,0 +1,4 @@
+# Optional: only legacy XLS needs this package.
+# Choose a release compatible with the deployment Python and OS.
+# Verified with xlrd 2.0.2; this is not a runtime version restriction.
+xlrd

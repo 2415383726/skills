@@ -1,0 +1,450 @@
+{
+  "annotation_status": "seed-unreviewed",
+  "notice": "纯合成开发种子，预期未经人工审定；不能用于宣称人工准确率。",
+  "cases": [
+    {
+      "id": "seed-001",
+      "annotation_status": "seed-unreviewed",
+      "text": "请尽快部暑下一阶段工作。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "部暑"
+          },
+          "suggestion": "部署"
+        }
+      ]
+    },
+    {
+      "id": "seed-002",
+      "annotation_status": "seed-unreviewed",
+      "text": "有关材料已经按排专人整理。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "按排"
+          },
+          "suggestion": "安排"
+        }
+      ]
+    },
+    {
+      "id": "seed-003",
+      "annotation_status": "seed-unreviewed",
+      "text": "请务必尊守会议纪律。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "尊守"
+          },
+          "suggestion": "遵守"
+        }
+      ]
+    },
+    {
+      "id": "seed-004",
+      "annotation_status": "seed-unreviewed",
+      "text": "本次活动取得园满成功。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "园满"
+          },
+          "suggestion": "圆满"
+        }
+      ]
+    },
+    {
+      "id": "seed-005",
+      "annotation_status": "seed-unreviewed",
+      "text": "请核实报送材料的真伪，不得弄虚做假。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "弄虚做假"
+          },
+          "suggestion": "弄虚作假"
+        }
+      ]
+    },
+    {
+      "id": "seed-006",
+      "annotation_status": "seed-unreviewed",
+      "text": "要再接再励完成任务。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "再接再励"
+          },
+          "suggestion": "再接再厉"
+        }
+      ]
+    },
+    {
+      "id": "seed-007",
+      "annotation_status": "seed-unreviewed",
+      "text": "有关意见已汇总完毕，请予审义。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "审义"
+          },
+          "suggestion": "审议"
+        }
+      ]
+    },
+    {
+      "id": "seed-008",
+      "annotation_status": "seed-unreviewed",
+      "text": "各单位应严格遵守相关规订。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "规订"
+          },
+          "suggestion": "规定"
+        }
+      ]
+    },
+    {
+      "id": "seed-009",
+      "annotation_status": "seed-unreviewed",
+      "text": "请及时反馈落实情兄。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "情兄"
+          },
+          "suggestion": "情况"
+        }
+      ]
+    },
+    {
+      "id": "seed-010",
+      "annotation_status": "seed-unreviewed",
+      "text": "材料已经送交办公窒。",
+      "expected": [
+        {
+          "category": "错别字",
+          "anchor": {
+            "quote": "办公窒"
+          },
+          "suggestion": "办公室"
+        }
+      ]
+    },
+    {
+      "id": "seed-011",
+      "annotation_status": "seed-unreviewed",
+      "text": "请于于周五报送材料。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "于于"
+          },
+          "suggestion": "于"
+        }
+      ]
+    },
+    {
+      "id": "seed-012",
+      "annotation_status": "seed-unreviewed",
+      "text": "各单位应认真认真核对名单。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "认真认真"
+          },
+          "suggestion": "认真"
+        }
+      ]
+    },
+    {
+      "id": "seed-013",
+      "annotation_status": "seed-unreviewed",
+      "text": "会议将于明天上午上午召开。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "上午上午"
+          },
+          "suggestion": "上午"
+        }
+      ]
+    },
+    {
+      "id": "seed-014",
+      "annotation_status": "seed-unreviewed",
+      "text": "请将附件发送至指定邮地址。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "邮地址"
+          },
+          "suggestion": "邮件地址"
+        }
+      ]
+    },
+    {
+      "id": "seed-015",
+      "annotation_status": "seed-unreviewed",
+      "text": "请携带本人身份原件。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "身份原件"
+          },
+          "suggestion": "身份证原件"
+        }
+      ]
+    },
+    {
+      "id": "seed-016",
+      "annotation_status": "seed-unreviewed",
+      "text": "会议地为三楼会议室。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "会议地"
+          },
+          "suggestion": "会议地点"
+        }
+      ]
+    },
+    {
+      "id": "seed-017",
+      "annotation_status": "seed-unreviewed",
+      "text": "请根据实际情况况填写。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "情况况"
+          },
+          "suggestion": "情况"
+        }
+      ]
+    },
+    {
+      "id": "seed-018",
+      "annotation_status": "seed-unreviewed",
+      "text": "本通知自发布之日起起施行。",
+      "expected": [
+        {
+          "category": "多漏字",
+          "anchor": {
+            "quote": "日起起"
+          },
+          "suggestion": "日起"
+        }
+      ]
+    },
+    {
+      "id": "seed-019",
+      "annotation_status": "seed-unreviewed",
+      "text": "请认真核对名单。。",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "。。"
+          },
+          "suggestion": "。"
+        }
+      ]
+    },
+    {
+      "id": "seed-020",
+      "annotation_status": "seed-unreviewed",
+      "text": "会议时间为上午九时，，请准时参加。",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "，，"
+          },
+          "suggestion": "，"
+        }
+      ]
+    },
+    {
+      "id": "seed-021",
+      "annotation_status": "seed-unreviewed",
+      "text": "请提交以下材料：申请表、身份证复印件、、相关证明。",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "、、"
+          },
+          "suggestion": "、"
+        }
+      ]
+    },
+    {
+      "id": "seed-022",
+      "annotation_status": "seed-unreviewed",
+      "text": "关于印发《工作方案》的通知》",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "通知》"
+          },
+          "suggestion": "通知"
+        }
+      ]
+    },
+    {
+      "id": "seed-023",
+      "annotation_status": "seed-unreviewed",
+      "text": "请填写《申请表。",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "《申请表。"
+          },
+          "suggestion": "《申请表》。"
+        }
+      ]
+    },
+    {
+      "id": "seed-024",
+      "annotation_status": "seed-unreviewed",
+      "text": "工作人员表示：“材料已收齐。",
+      "expected": [
+        {
+          "category": "标点",
+          "anchor": {
+            "quote": "“材料已收齐。"
+          },
+          "suggestion": "“材料已收齐。”"
+        }
+      ]
+    },
+    {
+      "id": "seed-025",
+      "annotation_status": "seed-unreviewed",
+      "text": "请认真学习有关规定。",
+      "expected": []
+    },
+    {
+      "id": "seed-026",
+      "annotation_status": "seed-unreviewed",
+      "text": "各单位须及时报送材料。",
+      "expected": []
+    },
+    {
+      "id": "seed-027",
+      "annotation_status": "seed-unreviewed",
+      "text": "稳步推进重点工作。",
+      "expected": []
+    },
+    {
+      "id": "seed-028",
+      "annotation_status": "seed-unreviewed",
+      "text": "进一步提高服务质量。",
+      "expected": []
+    },
+    {
+      "id": "seed-029",
+      "annotation_status": "seed-unreviewed",
+      "text": "他高兴地向大家介绍情况。",
+      "expected": []
+    },
+    {
+      "id": "seed-030",
+      "annotation_status": "seed-unreviewed",
+      "text": "这项工作完成得很好。",
+      "expected": []
+    },
+    {
+      "id": "seed-031",
+      "annotation_status": "seed-unreviewed",
+      "text": "这是需要保留的原始记录。",
+      "expected": []
+    },
+    {
+      "id": "seed-032",
+      "annotation_status": "seed-unreviewed",
+      "text": "请积极参加培训。",
+      "expected": []
+    },
+    {
+      "id": "seed-033",
+      "annotation_status": "seed-unreviewed",
+      "text": "请于2026年9月10日前反馈意见。",
+      "expected": []
+    },
+    {
+      "id": "seed-034",
+      "annotation_status": "seed-unreviewed",
+      "text": "技术参数为3.5毫米。",
+      "expected": []
+    },
+    {
+      "id": "seed-035",
+      "annotation_status": "seed-unreviewed",
+      "text": "请访问https://example.invalid/a?x=1&y=2查看示例。",
+      "expected": []
+    },
+    {
+      "id": "seed-036",
+      "annotation_status": "seed-unreviewed",
+      "text": "示例邮箱为user@example.invalid。",
+      "expected": []
+    },
+    {
+      "id": "seed-037",
+      "annotation_status": "seed-unreviewed",
+      "text": "版本号为v2.2.0。",
+      "expected": []
+    },
+    {
+      "id": "seed-038",
+      "annotation_status": "seed-unreviewed",
+      "text": "代码示例为print(\"hello\")。",
+      "expected": []
+    },
+    {
+      "id": "seed-039",
+      "annotation_status": "seed-unreviewed",
+      "text": "文件名为report_v2.2.json。",
+      "expected": []
+    },
+    {
+      "id": "seed-040",
+      "annotation_status": "seed-unreviewed",
+      "text": "请保留表达式a+b=c中的符号。",
+      "expected": []
+    },
+    {"id":"seed-041","annotation_status":"seed-unreviewed","text":"要使用人之风真正纯洁起来。","expected":[]},
+    {"id":"seed-042","annotation_status":"seed-unreviewed","text":"有的人出了问题，还是官照当照升。","expected":[]},
+    {"id":"seed-043","annotation_status":"seed-unreviewed","text":"面对矛盾不能总是躲着行。","expected":[]},
+    {"id":"seed-044","annotation_status":"seed-unreviewed","text":"这件事很复杂，不能面面俱到说。","expected":[]},
+    {"id":"seed-045","annotation_status":"seed-unreviewed","text":"讲话中说：“招进女婿气走儿，这种两难要认真对待。”","expected":[]},
+    {"id":"seed-046","annotation_status":"seed-unreviewed","text":"材料引用“行有不得者皆反求诸己”，用来说明先从自身查找原因。","expected":[]},
+    {"id":"seed-047","annotation_status":"seed-unreviewed","text":"会议强调：“情况要摸清，问题要找准。","expected":[]},
+    {"id":"seed-048","annotation_status":"seed-unreviewed","text":"“措施要具体，责任要落实。”上述要求由各单位分别落实。","expected":[]},
+    {"id":"seed-049","annotation_status":"seed-unreviewed","text":"以下四段为同一合成通知的连续正文。市政务服务中心（以下简称中心）负责本轮材料汇总。中心办公室承担收件、登记和转交工作，业务处负责核对事项内容。各单位填报材料时，应说明事项名称、办理进度以及尚需协调的问题；已经完成的事项，也应保留对应记录，便于后续查阅。","expected":[]},
+    {"id":"seed-050","annotation_status":"seed-unreviewed","text":"本轮汇总按月开展。各单位先核对本单位材料，再报送中心办公室。遇到暂时无法确定的名称，应在备注中说明所指对象和上下文，不凭字形接近自行统一。因职责调整形成的历史名称，按原材料记载保留，同时说明现行承接单位。已经明确使用的简称，后文可以继续使用。","expected":[]},
+    {"id":"seed-051","annotation_status":"seed-unreviewed","text":"中心收到材料后，按事项类别转交业务处。业务处核对事项内容，办公室核对收件记录，两者分别履行各自职责。这里的办公室即前文所称中心办公室。对跨部门事项，汇总时注明牵头单位和协办单位；单位名称相近但职责不同的，不合并为同一对象。","expected":[]},
+    {"id":"seed-052","annotation_status":"seed-unreviewed","text":"市政务服务中心将根据本轮材料形成情况汇总。各单位如需补充说明，仍按前述渠道报送。中心、中心办公室和业务处在本文中分别指机构整体、该机构办公室和相关业务部门，名称长短不同不等于写法矛盾。全文以原始记录为依据，保留能够成立的表达，不为追求统一句式而修改原意。","expected":[]}
+  ]
+}
