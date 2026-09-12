@@ -8,25 +8,25 @@ A personal collection of agent skills I build and use daily.
 
 | Skill | 说明 | 状态 |
 | --- | --- | --- |
-| [gongwen-proofread](gongwen-proofread/) | 中文公文文字校对：错别字、多字漏字、中文标点 | 可用 |
+| [chinese-proofread](chinese-proofread/) | 中文文字校对：错别字、多字漏字、中文标点 | 可用 |
 | *更多技能* | 建设中，陆续加入 | 规划 |
 
 ## 目录结构
 
 ```text
 skills/
-├── gongwen-proofread/   # 公文文字校对技能
+├── chinese-proofread/   # 中文文字校对技能
 ├── LICENSE
 └── README.md
 ```
 
 ## 使用方式
 
-将某个 skill 的整个文件夹放入宿主的 skills 目录，确保其 `SKILL.md` 直接位于该文件夹下，然后刷新技能列表即可。以 gongwen-proofread 为例，安装与使用见 [INSTALL.md](gongwen-proofread/INSTALL.md)。
+将某个 skill 的整个文件夹放入宿主的 skills 目录，确保其 `SKILL.md` 直接位于该文件夹下，然后刷新技能列表即可。以 chinese-proofread 为例，安装与使用见 [INSTALL.md](chinese-proofread/INSTALL.md)。
 
-## 当前技能：gongwen-proofread（公文文字校对）
+## 当前技能：chinese-proofread（中文文字校对）
 
-校对中文公文、通知、报告和办公材料中的错别字、多字漏字及中文标点。支持粘贴文字和本地 Word、WPS、Excel、TXT 材料；短文直接回复，长文生成离线 HTML 报告。不默认润色，不核查外部事实。
+校对公文、通知、报告、讲话稿及日常办公文字中的错别字、多字漏字、用字和标点问题，并提示文内名称不一致的具体疑点。支持粘贴文字和本地 Word、WPS、Excel、TXT 材料；短文直接回复，长文生成离线 HTML 报告。不默认润色，不核查外部事实。
 
 **特性**
 
@@ -39,7 +39,7 @@ skills/
 运行该技能的机械回归测试：
 
 ```bash
-python -m unittest discover -s gongwen-proofread/tests -v
+python -m unittest discover -s chinese-proofread/tests -v
 ```
 
 ## License

@@ -1,0 +1,23 @@
+Third-Party Dependencies and Licenses
+=======================================
+
+This project uses the following third-party Python packages as runtime
+dependencies. They are NOT bundled in this repository — they are installed
+automatically by `uv` at execution time.
+
+| Package       | Version | License    | URL                                        |
+|---------------|---------|------------|--------------------------------------------|
+| openpyxl      | latest  | MIT        | https://openpyxl.readthedocs.io            |
+| python-docx   | latest  | MIT        | https://python-docx.readthedocs.io         |
+| python-pptx   | latest  | MIT        | https://python-pptx.readthedocs.io         |
+| PyMuPDF       | latest  | AGPL-3.0   | https://pymupdf.readthedocs.io             |
+| pymupdf4llm   | latest  | AGPL-3.0   | https://github.com/pymupdf/RAG             |
+
+Note on PyMuPDF / pymupdf4llm
+------------------------------
+PyMuPDF and pymupdf4llm are licensed under the GNU Affero General Public
+License v3.0 (AGPL-3.0). These packages are used by the pdf-to-markdown
+skill only. They are not bundled or modified — they are fetched and executed
+at runtime via `uv run`. Users should review the AGPL-3.0 terms to ensure
+compliance with their use case. Commercial licenses are available from
+Artifex Software, Inc. (https://artifex.com).
