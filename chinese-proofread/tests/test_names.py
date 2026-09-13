@@ -159,3 +159,34 @@ class NameTests(unittest.TestCase):
                          '--coordinator','test-coordinator',ok=False)
         self.assertIn('指纹变化',result.stderr)
         self.assertFalse(target.exists())
+
+    def test_changed_name_aggregate_is_rejected_before_delivery(self):
+        p=test_pipeline.PipelineTests();p.setUp()
+        self.addCleanup(p.doCleanups)
+        p.prepare('综合处负责统筹。')
+        for task in p.step()['tasks']: p.complete(task)
+        for task in p.step()['tasks']: p.complete(task)
+        path=p.work/'consistency-result.json'
+        value=json.loads(path.read_text());value['limitations'].append('changed')
+        path.write_text(json.dumps(value))
+        result=p.command('tasks.py','step','--work',p.work,'--coordinator','test-coordinator',ok=False)
+        self.assertIn('名称汇总结果与已接收分组结果不一致',result.stderr)
+
+    def test_second_supplement_preserves_original_collection_coverage(self):
+        p=test_pipeline.PipelineTests();p.setUp()
+        self.addCleanup(p.doCleanups)
+        p.prepare('综合处负责统筹。')
+        for task in p.step()['tasks']: p.complete(task)
+        for task in p.step()['tasks']: p.complete(task)
+        expected=json.loads((p.work/'consistency-input.json').read_text())['coverage']
+        self.assertGreater(expected['expected_batches'],0)
+        for n in range(2):
+            target=p.base/('supplement-'+str(n))
+            p.command('recheck_names.py','--source-work',p.work,'--work',target,
+                      '--coordinator','test-coordinator')
+            p.work=target
+            for task in p.step()['tasks']: p.complete(task)
+            self.assertEqual(p.step()['action'],'deliver')
+            actual=json.loads((p.work/'consistency-input.json').read_text())
+            self.assertEqual(actual['coverage'],expected)
+            self.assertFalse(any('覆盖度未知' in note for note in actual['coverage_notes']))

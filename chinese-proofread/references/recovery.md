@@ -11,9 +11,9 @@ python "<SKILL>/scripts/tasks.py" status --work "<WORK>" --compact
 python "<SKILL>/scripts/tasks.py" step --work "<WORK>" --coordinator "<COORDINATOR>" --compact --resume-assigned
 ```
 
-status 不分配、接收或推进任务；显示属主、有效并发、任务票据、开启时间和停留时长。response_pending 是结果已提交待接收，running 是已启动，assigned 才是未启动预留。last_reconciliation 记录上次接收数。状态是观察时快照，领取时 open 再检查。
+status 不分配、接收或推进任务；显示属主、有效并发、任务票据、开启时间和停留时长。response_pending 是结果已提交待接收，running 是已启动，assigned 表示尚无领取回执，可能已在宿主排队启动；结合 host_handle 和 dispatch_state 核对。last_reconciliation 记录上次接收数。状态是观察时快照，领取时 open 再检查。
 
-恢复时只重交接尚未启动的 assigned，沿用原票据，不消耗判断次数。如果原协调实例已经退出，用当前实例 ID 加 --takeover 显式接管；脚本记录切换并保留原检查员任务。仅因 last_activity_at 很旧，不能断言旧实例已退出。不要盲目接管仍在活动的实例；可以先等待已有检查员提交。
+恢复时只重交接已核对尚未启动且无绑定句柄的 assigned，沿用原票据，不消耗判断次数。如果原协调实例已经退出，用当前实例 ID 加 --takeover 显式接管；脚本记录切换并保留原检查员任务。仅因 last_activity_at 很旧，不能断言旧实例已退出。不要盲目接管仍在活动的实例；可以先等待已有检查员提交。
 
 ## 结果局部修正
 
@@ -80,3 +80,5 @@ python "<SKILL>/scripts/recheck_names.py" --source-work "<原WORK>" --work "<新
 补查只复用已保存且指纹吻合的名称原字、位置和采集覆盖记录，重新从原文构建去重索引；允许读取旧版索引，不复用旧判断。原始源文件必须保持不变，原任务须已结束。不会补齐当时未采集到的名称；缺失批次仍会明示。输出为独立名称补查报告，不覆盖原报告，不重跑初检、不包含原报告其他修改。不要把补查报告当作完整重新校对。
 
 协调员 ID 可通过只读 status --compact 查询。查询到旧身份不等于新会话继承身份；不同会话接管仍显式使用 --takeover，不自动借用原协调员 ID。
+
+已绑定句柄的预留任务不会被 --resume-assigned 重派；确认宿主不再运行后按[宿主事件协议](host-events.md)释放绑定。结束消息与执行结束通知应按同一任务轮次去重。

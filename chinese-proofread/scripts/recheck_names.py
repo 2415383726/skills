@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 import names
+import host_bridge
 import policy
 import provenance
 import report
@@ -39,7 +40,10 @@ def prepare(source, work, coordinator, budget):
             report.require(bid in units and term['text'] in units[bid]['text'], '旧索引名称不在原文中')
             raw.append({'text': term['text'], 'kind': '名称', 'block_id': bid})
     compact = names.index(units, raw)
-    coverage, coverage_notes = names.coverage(old.get('expected_batch_ids', []), old.get('executions', []))
+    if old.get('names_only') and 'coverage' in index and 'coverage_notes' in index:
+        coverage, coverage_notes = index['coverage'], index['coverage_notes']
+    else:
+        coverage, coverage_notes = names.coverage(old.get('expected_batch_ids', []), old.get('executions', []))
     note = '这是独立名称补查报告，仅复用原任务的名称采集数据；不重做文字初检，不包含原报告的其他修改。'
     work.mkdir(parents=True)
     tasks.save(work / 'document.json', document)
@@ -71,11 +75,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-work', required=True)
     parser.add_argument('--work', required=True)
-    parser.add_argument('--coordinator', required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--coordinator')
+    group.add_argument('--coordinator-file')
     parser.add_argument('--max-input-chars', type=int, default=policy.CONSISTENCY_INPUT_CHARS)
     args = parser.parse_args()
     try:
-        print(json.dumps(prepare(args.source_work, args.work, args.coordinator, args.max_input_chars), ensure_ascii=False))
+        print(json.dumps(prepare(args.source_work, args.work, host_bridge.owner(args.coordinator_file) if args.coordinator_file else args.coordinator, args.max_input_chars), ensure_ascii=False))
     except (ValueError, OSError, KeyError, TypeError) as exc:
         print('错误：' + str(exc), file=sys.stderr)
         return 2

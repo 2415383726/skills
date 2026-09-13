@@ -16,6 +16,7 @@ import uuid
 
 import provenance
 import guidance
+import host_bridge
 import names
 import report
 import workflow as wf
@@ -296,13 +297,17 @@ def advance(work, state, document, manifest):
             executions.append(part.get('execution', {}))
             for candidate in part['candidates']:
                 combined.append(dict(candidate, id='name-' + str(len(combined) + 1)))
-        if not (work / 'consistency-result.json').exists():
-            save(work / 'consistency-result.json', {
-                'schema_version': wf.SCHEMA, 'task': 'consistency-result', 'document_sha256': wf.sha(document),
-                'merged_sha256': wf.sha(wf.load(work / 'merged.json')), 'checked': True,
-                'candidates': combined, 'limitations': list(dict.fromkeys(notes)),
-                'complete': all(state['jobs'][b['id']]['status'] == 'complete' for b in state['consistency_plan']),
-                'executions': executions, 'coverage': consistency.get('coverage', {})})
+        aggregate = {
+            'schema_version': wf.SCHEMA, 'task': 'consistency-result', 'document_sha256': wf.sha(document),
+            'merged_sha256': wf.sha(wf.load(work / 'merged.json')), 'checked': True,
+            'candidates': combined, 'limitations': list(dict.fromkeys(notes)),
+            'complete': all(state['jobs'][b['id']]['status'] == 'complete' for b in state['consistency_plan']),
+            'executions': executions, 'coverage': consistency.get('coverage', {})}
+        aggregate_path = work / 'consistency-result.json'
+        if aggregate_path.exists():
+            report.require(wf.sha(wf.load(aggregate_path)) == wf.sha(aggregate), '名称汇总结果与已接收分组结果不一致')
+        else:
+            save(aggregate_path, aggregate)
     if not state.get('review_plan'):
         invoke(wf.review_plan_command, document=str(work / 'document.json'), manifest=str(work / 'batches' / 'manifest.json'),
                merged=str(work / 'merged.json'), consistency_result=str(work / 'consistency-result.json') if consistency['required'] and (work / 'consistency-result.json').is_file() else None,
@@ -530,7 +535,13 @@ def submit(job_path, body_path):
 def delivery_summary(work, document):
     from collections import Counter
     review = wf.load(work / 'review.json')
-    return {'severity': {level: sum(f['severity'] == level for f in review['findings']) for level in ('confirmed', 'pending')},
+    state = wf.load(work / 'task-state.json')
+    return {'execution_counts': {'planned_jobs': len(state['jobs']),
+                                 'opened_attempts': len(list((work / 'jobs').glob('*.json.started'))),
+                                 'complete_jobs': sum(j['status'] == 'complete' for j in state['jobs'].values()),
+                                 'skipped_jobs': sum(j['status'] == 'skipped' for j in state['jobs'].values())},
+            'review_decisions': review.get('process_statistics', {}).get('review', {}),
+            'severity': {level: sum(f['severity'] == level for f in review['findings']) for level in ('confirmed', 'pending')},
             'categories': dict(Counter(f['category'] for f in review['findings'])),
             'scope': ('仅名称一致性补查；原提取范围：' if review.get('names_only') else '') + document['scope'],
             'coverage': {'units_total': len(report.document_units(document)),
@@ -547,7 +558,7 @@ def simple_step(result):
               'deliver_report': 'deliver', 'wait_for_workers': 'wait'}[result['next_action']]
     answer = {'action': action, 'phase': result['phase'], 'concurrency': result['concurrency'],
               'progress': result.get('pipeline', []), 'notes': result.get('notes', []),
-              'stalled': result.get('stalled', [])}
+              'stalled': result.get('stalled', []), 'events': result.get('events', [])}
     if answer['stalled']:
         answer['recovery'] = '核对宿主任务句柄；确认尚未启动后执行 step --resume-assigned。不要把启动慢当失败，不自动跳过。'
     if action == 'dispatch':
@@ -611,18 +622,18 @@ def next_tasks(work, state, phase, compact=False, resume_assigned=False):
     slots = max(0, state['concurrency'] - len(running) - len(assigned))
     ready = []
     for job in state['jobs'].values():
-        replay = resume_assigned and job['status'] == 'assigned'
+        replay = resume_assigned and job['status'] == 'assigned' and not host_bridge.bound(work, job)
         if (job['status'] == 'pending' and slots > 0) or replay:
             job['status'] = 'assigned'
             if not replay:
                 job['assigned_at'] = now()
             if compact:
                 ready.append({'id': job['id'], 'executor': job['executor'],
-                              'launch_mode': 'spawn_fresh_context',
+                              'launch_mode': 'spawn_fresh_context', 'event': host_bridge.key(job),
                               'prompt': handoff_prompt(job)})
             else:
                 ready.append({'id': job['id'], 'job_path': job['job_path'], 'executor': job['executor'],
-                              'launch_mode': 'spawn_fresh_context',
+                              'launch_mode': 'spawn_fresh_context', 'event': host_bridge.key(job),
                               'submit_argv': submit_argv(job), 'prompt': handoff_prompt(job)})
             if not replay:
                 assigned.append(job['id'])
@@ -670,6 +681,8 @@ def status_snapshot(work):
                      'context_id': evidence['context_id'], 'context_source': evidence['context_source'],
                      'ticket_created_at': job.get('ticket_created_at'), 'assigned_at': job.get('assigned_at'),
                      'opened_at': evidence['opened_at'],
+                     'host_handle': host_bridge.bound(work, job),
+                     'dispatch_state': ('recorded' if host_bridge.bound(work, job) else 'unrecorded'),
                      **({'skip_reason': job['skip_reason']} if job.get('skip_reason') else {}),
                      'ticket_age_seconds': age_seconds(job.get('ticket_created_at'), observed_at),
                      'assigned_age_seconds': age_seconds(job.get('assigned_at'), observed_at),
@@ -703,7 +716,8 @@ def status_snapshot(work):
     phases.append({'phase': 'report', 'status': 'complete' if phase == 'done' else 'pending',
                    'total': 1, 'complete': int(phase == 'done')})
     occupied = sum(j['status'] in ('assigned', 'running', 'response_pending') for j in jobs)
-    stalled = [{'id': j['id'], 'assigned_age_seconds': j['assigned_age_seconds']}
+    stalled = [{'id': j['id'], 'assigned_age_seconds': j['assigned_age_seconds'],
+                'host_handle': j['host_handle'], 'dispatch_state': j['dispatch_state']}
                for j in jobs if j['status'] == 'assigned' and j['opened_at'] is None
                and j['assigned_age_seconds'] is not None and j['assigned_age_seconds'] >= 90]
     notes = [j['id'] + '：' + j.get('skip_reason', '任务已跳过') for j in jobs if j['status'] == 'skipped']
@@ -750,7 +764,10 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     nxt = commands.add_parser('step', aliases=['next'], help='step 提供主 Agent 的精简动作接口')
     nxt.add_argument('--work', required=True)
-    nxt.add_argument('--coordinator', required=True, help='本协调会话的稳定真实标识')
+    owner_group = nxt.add_mutually_exclusive_group(required=True)
+    owner_group.add_argument('--coordinator', help='本协调会话的稳定标识')
+    owner_group.add_argument('--coordinator-file', help='host_bridge.py identity 生成的本会话身份文件')
+    nxt.add_argument('--event', action='append', default=[], help='真实完成通知对应的 task@attempt；可重复提供以合并一批通知')
     nxt.add_argument('--takeover', action='store_true', help='显式接管其他协调员，保留已分配/运行任务')
     nxt.add_argument('--concurrency', type=int)
     nxt.add_argument('--target-chars', type=int)
@@ -759,18 +776,24 @@ def main():
     nxt.add_argument('--resume-assigned', action='store_true', help='重新交接已分配但尚未启动的任务，不消耗重查次数')
     retry = commands.add_parser('retry')
     retry.add_argument('--work', required=True)
-    retry.add_argument('--coordinator', required=True)
+    owner_group = retry.add_mutually_exclusive_group(required=True)
+    owner_group.add_argument('--coordinator', help='本协调会话的稳定标识')
+    owner_group.add_argument('--coordinator-file', help='host_bridge.py identity 生成的本会话身份文件')
     retry.add_argument('--takeover', action='store_true')
     retry.add_argument('--task', required=True)
     retry.add_argument('--fallback', action='store_true', help='旧参数兼容：跳过任务，不再由主 Agent 补做')
     skip = commands.add_parser('skip', help='确认任务已结束后跳过，不读取或补做内容')
     skip.add_argument('--work', required=True)
-    skip.add_argument('--coordinator', required=True)
+    owner_group = skip.add_mutually_exclusive_group(required=True)
+    owner_group.add_argument('--coordinator', help='本协调会话的稳定标识')
+    owner_group.add_argument('--coordinator-file', help='host_bridge.py identity 生成的本会话身份文件')
     skip.add_argument('--takeover', action='store_true')
     skip.add_argument('--task', required=True)
     partial = commands.add_parser('partial', help='一步生成标明未完成范围的 HTML 快照，不停止现有任务')
     partial.add_argument('--work', required=True)
-    partial.add_argument('--coordinator', required=True)
+    owner_group = partial.add_mutually_exclusive_group(required=True)
+    owner_group.add_argument('--coordinator', help='本协调会话的稳定标识')
+    owner_group.add_argument('--coordinator-file', help='host_bridge.py identity 生成的本会话身份文件')
     partial.add_argument('--takeover', action='store_true')
     submission = commands.add_parser('submit')
     submission.add_argument('--job', required=True)
@@ -792,6 +815,8 @@ def main():
         args.command = 'next'
         args.compact = True
     try:
+        if getattr(args, 'coordinator_file', None):
+            args.coordinator = host_bridge.owner(args.coordinator_file)
         if args.command == 'open':
             opened = open_job(args.job, args.context_id, args.context_source)
             if args.brief and opened['action'] == 'execute':
@@ -843,6 +868,32 @@ def main():
                          'concurrency': 8, 'target_chars': target_chars, 'max_chars': max_chars}
                 claim_coordinator(work, state, args.coordinator, args.takeover)
                 save(state_path, state)
+            event_results = []
+            if args.command == 'next' and args.event:
+                handled = set(state.get('handled_events', []))
+                fresh_events = []
+                for event in dict.fromkeys(args.event):
+                    task_id, separator, attempt = event.rpartition('@')
+                    report.require(separator and attempt.isdigit() and int(attempt) > 0, 'event 格式须为真实任务 ID@轮次')
+                    job = state['jobs'].get(task_id)
+                    report.require(job is not None, 'event 未对应本工作区任务')
+                    report.require(int(attempt) <= job['attempt'], 'event 轮次尚未派发')
+                    disposition = 'stale' if int(attempt) != job['attempt'] else 'already_handled' if event in handled else 'new'
+                    event_results.append({'event': event, 'disposition': disposition, 'saved_status': job['status']})
+                    if disposition == 'new':
+                        if job['status'] not in ('complete', 'skipped', 'invalid') and not Path(job['response_path']).exists():
+                            snapshot = status_snapshot(work)
+                            print(json.dumps({'action': 'repair', 'events': event_results, 'progress': snapshot['phases'],
+                                'errors': [{'id': task_id, 'error': '收到结束通知但尚无提交回执；核对宿主，不能直接当作已完成或重派'}]}, ensure_ascii=False))
+                            return 0
+                        fresh_events.append(event)
+                if not fresh_events:
+                    snapshot = status_snapshot(work)
+                    print(json.dumps({'action': 'ignore_event', 'events': event_results, 'progress': snapshot['phases'],
+                        'reservations': [{'id': j['id'], 'host_handle': j['host_handle'], 'dispatch_state': j['dispatch_state']}
+                                         for j in snapshot['jobs'] if j['status'] == 'assigned'],
+                        'instruction': '通知已处理或属于旧轮次，不重复推进。有预留任务时核对句柄；前次交接中断则按恢复流程处理，否则交还控制权等待新通知。主动恢复可不带 event 执行 step。'}, ensure_ascii=False))
+                    return 0
             if 'manifest_sha256' not in state:
                 invoke(wf.batch_command, document=str(work / 'document.json'), output_dir=str(work / 'batches'),
                        target_chars=state['target_chars'], max_chars=state['max_chars'], context_units=1)
@@ -890,6 +941,8 @@ def main():
                 newly_complete = reconcile(work, state, document, manifest)
                 phase = advance(work, state, document, manifest)
                 result = next_tasks(work, state, phase, args.compact, args.resume_assigned)
+                if args.command == 'next' and args.event:
+                    state['handled_events'] = sorted(set(state.get('handled_events', [])) | set(fresh_events))
             finally:
                 save(state_path, state, state_path.exists())
             snapshot = status_snapshot(work)
@@ -899,6 +952,7 @@ def main():
                           accepted_this_step=len(newly_complete),
                           next_action='dispatch_ready' if result['ready'] else 'resolve_errors' if result['errors'] or snapshot['stalled']
                           else 'deliver_report' if phase == 'done' else 'wait_for_workers')
+            result['events'] = event_results
             print(json.dumps(simple_step(result) if simple else result,
                              ensure_ascii=False, indent=None if args.compact else 2))
     except (ValueError, OSError, KeyError, TypeError) as exc:

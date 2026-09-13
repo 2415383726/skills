@@ -59,3 +59,7 @@ jobs/*.guidance.md 由 scripts/guidance.py 组装。角色只读该文件和任�
 summary 只含数量、覆盖和限制，不含候选明细。名称补查工作区 names_only=true，保留 reused_from 指向原目录；不创建初检任务，独立报告明确补查范围。
 
 名称汇总结果的 complete 明示是否所有比较任务完成；checked 表示已收集并校验可用结果，不用它掩盖分组跳过。executions 保留各名称检查任务的执行记录，测评仅在 complete=true 时给出完整名称阶段评分。
+
+dispatch 的 event 为 task@attempt。host-tasks.json 将其绑定真实宿主句柄与任务票据；任务状态中的 handled_events 记录已推进的通知轮次。step --event 可合并多条真实完成通知，重复/旧通知返回 ignore_event。coordinator-file 是本地协调身份标签，不是模型上下文证据。
+
+summary.review_decisions 提供复核的 accepted/rejected/replaced 及 complete；零剔除不自动触发重查或配额。execution_counts 区分计划任务数、实际 open 回执次数、已完成和跳过任务数；opened_attempts 不是宿主累计代理数，也不是质量指标。
