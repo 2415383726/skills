@@ -12,7 +12,7 @@ ROLES = ('proofread', 'review', 'consistency')
 DOMAINS = ('text', 'punctuation', 'names')
 
 
-def sources(role, payload=None, chat=False):
+def sources(role, payload=None, chat=False, queued=True):
     if role not in ROLES:
         raise ValueError('未知角色：' + str(role))
     selected = set()
@@ -52,6 +52,8 @@ def sources(role, payload=None, chat=False):
     files.extend('checks/' + domain + '.md' for domain in DOMAINS if domain in selected)
     if not chat:
         files.append('formats/' + role + '.md')
+        if queued:
+            files.append('roles/file-return.md')
     return files
 
 
@@ -65,13 +67,13 @@ def draft(role, payload):
 
 
 def all_sources():
-    return ['rules.md', 'rule-catalog.json', 'roles/chat.md'] + [
+    return ['rules.md', 'rule-catalog.json', 'roles/chat.md', 'roles/file-return.md'] + [
         folder + '/' + name + '.md' for folder, names in
         (('roles', ROLES), ('checks', DOMAINS), ('formats', ROLES)) for name in names]
 
 
-def compose(role, payload=None, chat=False):
-    files = sources(role, payload, chat)
+def compose(role, payload=None, chat=False, queued=True):
+    files = sources(role, payload, chat, queued)
     if chat:
         files.append('roles/chat.md')
     text = '\n\n'.join((REFERENCES / name).read_text(encoding='utf-8').strip() for name in files)
@@ -83,12 +85,13 @@ def main():
     parser.add_argument('--role', required=True, choices=ROLES)
     parser.add_argument('--input', help='复核任务 JSON；不提供时保留全部领域判据')
     parser.add_argument('--chat', action='store_true')
+    parser.add_argument('--standalone', action='store_true', help='独立测评：不附加生产队列的结束回传约定')
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
     import report
     try:
         payload = report.load_json(args.input) if args.input else None
-        text, files = compose(args.role, payload, args.chat)
+        text, files = compose(args.role, payload, args.chat, queued=not args.standalone)
         target = Path(args.output).resolve()
         skill = REFERENCES.parent
         report.require(target != skill and skill not in target.parents, '任务指引须生成在技能包之外')

@@ -63,7 +63,7 @@ class BoundaryTests(unittest.TestCase):
         review={'method':'test','limitations':[],'passes':[{'id':pid,'checked_block_ids':['p1']} for pid in ('A','B')],'findings':[]}
         html=report.render(doc,review)
         self.assertIn('已提取并检查的文字中',html)
-        self.assertIn('<details class="range-note" open>',html)
+        self.assertIn('<details class="range-note">',html)
         self.assertNotIn('aria-hidden="true">✓',html)
         self.assertIn('页眉未提取',html)
 

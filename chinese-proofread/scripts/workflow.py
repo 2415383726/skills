@@ -13,6 +13,7 @@ import report
 import provenance
 import policy
 import guidance
+import names as name_tools
 
 
 # Data protocol identifier is retained for existing artifacts; not the skill name or release version.
@@ -351,33 +352,7 @@ def pack_groups(groups, max_candidates, max_chars=None, measure=None):
 
 
 def term_index(units, terms):
-    index = {}
-    for term in terms:
-        key = (term["text"], term["kind"])
-        item = index.setdefault(key, {"text": term["text"], "kind": term["kind"], "occurrences": []})
-        unit = units[term["block_id"]]
-        starts, position = [], 0
-        while True:
-            position = unit["text"].find(term["text"], position)
-            if position < 0:
-                break
-            starts.append(position)
-            position += 1
-        for number, start in enumerate(starts, 1):
-            room = max(0, 240 - len(term["text"]))
-            begin = max(0, start - room // 2)
-            end = min(len(unit["text"]), begin + max(240, len(term["text"])))
-            begin = max(0, end - max(240, len(term["text"])))
-            occurrence = {
-                "block_id": term["block_id"],
-                "location": unit["location"],
-                "quote": term["text"],
-                "occurrence": number,
-                "context": unit["text"][begin:end],
-            }
-            if occurrence not in item["occurrences"]:
-                item["occurrences"].append(occurrence)
-    return sorted(index.values(), key=lambda item: (item["kind"], item["text"]))
+    return name_tools.index(units, terms)
 
 
 def merge_command(args):
@@ -424,10 +399,10 @@ def merge_command(args):
         "terms": term_index(units, terms),
         "instructions": "仅比较同一对象可能存在的不同写法；返回具体原文锚点，不泛泛要求核实。",
     }
-    # Reserve space for the fingerprint and budget metadata themselves.
-    consistency['budget_exceeded'] = len(json.dumps(consistency, ensure_ascii=False, indent=2)) + 256 > policy.CONSISTENCY_INPUT_CHARS
-    if consistency['required'] and consistency['terms'] and consistency['budget_exceeded']:
-        merged['limitations'].append('名称索引超出输入预算，名称一致性检查未完成。')
+    consistency['blocks'] = name_tools.blocks(units, consistency['terms'])
+    expected = [batch['id'] for batch in batches]
+    consistency['coverage'], consistency['coverage_notes'] = name_tools.coverage(expected, executions)
+    merged['limitations'].extend(consistency['coverage_notes'])
     dump(args.output, merged, args.overwrite, (args.document, args.manifest))
     consistency['max_input_chars'] = policy.CONSISTENCY_INPUT_CHARS
     consistency['merged_sha256'] = sha(merged)
@@ -802,11 +777,14 @@ def finalize_command(args):
     if policy.consistency_required(merged):
         method += "名称一致性检查状态见范围说明。"
     method += "报告中保留的意见均已按完整候选组及局部上下文复核。两路检查和复核可能共享模型盲区，不构成正确性保证。"
+    if merged.get('names_only'):
+        method = '仅复用既有名称采集数据，重新执行名称一致性检查及候选复核；本报告不包含原报告的其他修改。'
     audit = execution_audit(merged)
     if audit['collision_pairs']:
         limitations.append('发现 {} 个批次的 A/B 执行上下文标识相同，不满足隔离双检要求。'.format(audit['collision_pairs']))
     review = {
         "document_sha256": fingerprint,
+        "names_only": bool(merged.get("names_only")),
         "method": method,
         "limitations": limitations,
         "passes": merged["passes"],

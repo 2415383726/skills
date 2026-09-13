@@ -109,4 +109,14 @@ class GuidanceTests(unittest.TestCase):
         self.assertNotIn('rules_path',result)
         packet=Path(result['guidance_path']).read_text()
         self.assertIn('复核者',packet)
+        self.assertNotIn('<任务ID> submitted', packet)
         self.assertNotIn('校对者：发现候选',packet)
+
+    def test_file_return_contract_is_in_all_worker_packets_but_not_chat(self):
+        for role in guidance.ROLES:
+            packet, sources = guidance.compose(role)
+            self.assertIn('roles/file-return.md', sources)
+            self.assertIn('<任务ID> submitted', packet)
+            self.assertIn('不放入给主 Agent 的消息', packet)
+        _, sources = guidance.compose('proofread', chat=True)
+        self.assertNotIn('roles/file-return.md', sources)

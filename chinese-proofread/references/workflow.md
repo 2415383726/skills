@@ -37,7 +37,9 @@ COORDINATOR 使用本次主 Agent 会话的稳定标识；宿主没有时创建�
 python "<SKILL>/scripts/tasks.py" step --work "<WORK>" --coordinator "<COORDINATOR>" --concurrency <N>
 ```
 
-只按 action 执行：dispatch 原样派发 tasks 中的 prompt；wait 等已有任务完成；repair 读 [异常恢复](recovery.md)；deliver 交付 report_path。
+把返回内容作为 JSON 解析，只读取顶层 action；tasks[].launch_mode 仅描述创建方式。禁止用 sed/正则提取字段。step 会预留任务，不能丢弃输出或放进后台 shell 循环。
+
+只按顶层 action 执行：dispatch 原样派发 tasks 中的 prompt；wait 等已有任务完成；repair 读 [异常恢复](recovery.md)；deliver 交付 report_path，并主动说明 notes 中的跳过原因。
 
 不让主 Agent 转述正文、设计子任务指令、合并候选或写报告。每个派发 prompt 已含 open 命令；open --brief 只给检查员本任务 guidance.md 与输入文件路径。guidance.md 由脚本组装，检查员直接读取这一份，无需再读取 rules、其他角色格式或搜索参考文件。返回 stop_no_work 时该执行立即结束。
 
@@ -47,17 +49,19 @@ python "<SKILL>/scripts/tasks.py" step --work "<WORK>" --coordinator "<COORDINAT
 
 子代理成功只回“任务 ID + submitted”，失败只回“任务 ID + blocked + 简短类别”，不回正文、候选或总结。主 Agent 不读取 responses 明细，脚本负责接收；字段修正由原检查员完成。
 
-主 Agent 的固定循环：`step → dispatch 时派发全部返回任务 → 等待任意完成 → step`。没有宿主通知时，运行 `wait_command`；返回 `wait` 就重复同一等待命令，返回 `step` 才调用 step。超时返回 wait 是正常状态，不需要查源码或修复。启动记录变化不会单独唤醒等待；完成、失败或可推进状态会提前返回。不要预设必须循环多少轮。
+主 Agent 的事件顺序：`step → 派发全部返回任务 → 等待任意完成 → step`，不是编写 shell 循环。有宿主自动完成通知时，派发后交还控制权，收到通知再执行一次 step，不另运行 wait_command。没有通知时，单次执行 wait_command 并处理返回 JSON：wait 表示继续等待，step 表示可推进，repair 表示先核对 stalled 与宿主句柄再恢复。禁止自建后台 step/wait 循环。超时不表示失败，启动记录变化不会单独唤醒等待。
+
+step/wait 的 progress 按阶段显示完成、待启动、运行、排队和跳过数量；尚未规划的 total=null，不推算固定波次或最终任务总量。notes 是实际跳过原因，交付时主动说明。stalled 表示预留超过90秒仍无领取回执，只是提醒，不证明宿主未启动。
 
 ### 并发和分块
 
-首次传入宿主明确的剩余子代理容量；容量未知用 --concurrency 1，之后省略沿用。宿主映射见 [宿主契约](host.md)。脚本兼容调用者未指定时的默认值 4，不代表部署容量探测结果。提高并发前用相同材料实测耗时和失败率。
+新工作区默认并行度为 8；宿主或服务明确限制更低时传 --concurrency 调低，容量未知仍使用默认值。后续省略参数沿用已保存值；旧工作区显式传 --concurrency 8 才会更新。一次 dispatch 返回的任务须全部派发后再等待，不能创建一个就等待它完成。宿主映射见 [宿主契约](host.md)。
 
 初检分块默认目标 1600 字、上限 2000 字；这只决定任务阅读量。文件队列均执行名称一致性阶段（无名称索引时无需模型），不以批次数或 HTML 交付形式开关检查项目。
 
 复核同时受 25 个候选和输入 JSON 字符预算约束，默认 12000 字符；名称索引预算默认 16000 字符。默认值集中在 scripts/policy.py，是部署起点，不是模型窗口大小或质量保证。预算不含规则、角色说明、宿主提示词和输出，应为这些内容另留空间；与 token 数不等价。
 
-普通复核组按预算自动分批，不拆开重叠冲突组。单个不可拆分组超预算时跳过该组；名称索引整体超预算时跳过名称一致性阶段。保留输入和状态原因，报告标记实际未完成内容，其他可执行任务继续。不要截断原文后假称完整；部署者可在确认模型容量后调整预算并新建工作目录重跑。
+普通复核组按预算自动分批，不拆开重叠冲突组。单个不可拆分复核组超预算时跳过该组。名称索引按原文字面去重，同一原文块只存一次；超预算时拆成可独立读取的名称比较任务，确保每对名称至少共同出现一次，不按猜测类别或相似度切断比较。单个比较组仍超预算时只跳过该组。保留输入和状态原因，报告标记实际未完成内容，其他可执行任务继续。不要截断原文后假称完整；需要补做名称检查时，按异常恢复中的名称补查入口复用已采集名称，不必重跑初检。其他判定规则变化仍须新任务。
 
 ## 3. 自动收尾和交付
 
@@ -68,3 +72,5 @@ python "<SKILL>/scripts/tasks.py" step --work "<WORK>" --coordinator "<COORDINAT
 异常时再读 [异常恢复](recovery.md)，无需正常任务提前加载锁、票据、接管细节。旧 next --compact 接口仍保留供诊断。status 只观察状态，不证明报告文件当前有效，交付以 step 的实际校验为准。
 
 每个文件任务同时生成自己的 .json.body 结构草稿。初检 completed=false、名称 checked=false，复核仅预填 group_id 和空决定；必须实际检查并填写，草稿不能直接通过提交。修改的是本任务草稿，不读取其他任务结果。
+
+deliver.summary 提供各严重度和类别数量、覆盖范围、限制及初检单双路命中汇总。主 Agent 据此简短交付，不读取 findings；命中统计不是准确率，不给每条修改贴可信度标签。

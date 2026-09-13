@@ -13,6 +13,7 @@
 | 候选裁决步骤 | roles/review.md |
 | 名称差异判断步骤 | roles/consistency.md |
 | 聊天交付格式 | roles/chat.md |
+| 文件任务结束消息 | roles/file-return.md |
 | 文字、标点、名称的判据与对照示例 | checks/text.md、checks/punctuation.md、checks/names.md |
 | 各角色 JSON 字段契约 | formats 下对应角色文件 |
 | 规则编号与 necessity 开关 | rule-catalog.json |

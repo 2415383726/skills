@@ -44,7 +44,7 @@ def prepare(work, show_reasons=False):
     wf.dump(work / 'challenge-input.json', payload)
     wf.dump(work / 'challenge-binding.json', dict(document_sha256=wf.sha(document),
         input_sha256=wf.sha(payload), rules_sha256=wf.rules_sha(), initial_reasons_visible=show_reasons))
-    instruction_text, _ = guidance.compose('review', payload)
+    instruction_text, _ = guidance.compose('review', payload, queued=False)
     report.write_output(str(work / 'challenge-guidance.md'), instruction_text, False, ())
     return dict(input_path=str(work / 'challenge-input.json'), body_path=str(work / 'challenge-decisions.json'),
                 guidance_path=str(work / 'challenge-guidance.md'),

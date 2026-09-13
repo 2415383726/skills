@@ -275,7 +275,7 @@ def result_scope(document, review, units, checked):
     """Show actual omissions only. Execution evidence stays in review.json."""
     notes = list(document['limitations'])
     both = checked['A'] & checked['B']
-    if len(both) < len(units):
+    if len(both) < len(units) and not review.get('names_only'):
         notes.append('部分原文尚未完成检查。')
     for note in review['limitations']:
         # These are known machine-generated audit messages, not missing content.
@@ -297,12 +297,10 @@ def result_scope(document, review, units, checked):
     if not notes:
         return ''
     content = '<p>检查范围：{}</p><ul>'.format(esc(document['scope'])) + ''.join('<li>{}</li>'.format(esc(note)) for note in notes) + '</ul>'
-    if len(both) < len(units):
+    if len(both) < len(units) and not review.get('names_only'):
         content += '<ul>' + ''.join('<li><a href="#unit-{}">{}</a></li>'.format(bid, esc(unit['location']))
                                    for bid, unit in units.items() if bid not in both) + '</ul>'
-    if len(notes) == 1 and len(both) == len(units):
-        return '<div class="range-note"><p>检查范围：{}</p><p>{}</p></div>'.format(esc(document['scope']), esc(notes[0]))
-    return '<details class="range-note" open><summary>检查范围与未完成内容</summary>{}</details>'.format(content)
+    return '<details class="range-note"><summary>检查范围与未完成内容</summary>{}</details>'.format(content)
 
 
 def render(document, review):
@@ -311,7 +309,9 @@ def render(document, review):
     pending = [f for f in findings if f["severity"] == "pending"]
     definite_html = "".join(issue_card(f, n, units) for n, f in enumerate(confirmed, 1))
     if not confirmed:
-        if not checked['A'] | checked['B']:
+        if review.get('names_only'):
+            message = '本次仅补查名称一致性；具体疑点见待核实，未执行文字和标点初检。'
+        elif not checked['A'] | checked['B']:
             message = '尚无完成的检查记录。'
         elif review['limitations'] or len(checked['A'] & checked['B']) != len(units):
             message = '当前没有已确认的修改点。'
@@ -323,7 +323,7 @@ def render(document, review):
         definite_html = '<div class="empty-state"><span class="empty-symbol" aria-hidden="true">{}</span>{}</div>'.format(symbol, message)
     pending_html = ""
     if pending:
-        pending_html = '<details class="pending" id="pending"><summary>待核实 <span>{} 项</span></summary>{}</details>'.format(
+        pending_html = '<details class="pending" id="pending" open><summary>待核实 <span>{} 项</span></summary>{}</details>'.format(
             len(pending), "".join(issue_card(f, n, units) for n, f in enumerate(pending, len(confirmed) + 1)))
     fingerprint = hashlib.sha256(json.dumps(document, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
     summary = '<span><strong>{}</strong>处修改</span>'.format(len(confirmed))
@@ -332,7 +332,7 @@ def render(document, review):
     first = document['blocks'][0]
     document_title = '' if (first['kind'] == 'heading' and first['text'].strip() == document['title'].strip()) else '<h2>{}</h2>'.format(esc(document['title']))
     values = {
-        "TITLE": esc(document["title"]), "SOURCE": esc(document["source_name"]),
+        "TITLE": esc(document["title"]), "SOURCE": esc(("名称补查 · " if review.get("names_only") else "") + document["source_name"]),
         "SUMMARY": summary, "CONFIRMED_COUNT": str(len(confirmed)),
         "DOCUMENT_TITLE": document_title, "DOCUMENT": render_document(document, ranges),
         "FINDINGS": definite_html, "PENDING": pending_html, "FINGERPRINT": fingerprint,

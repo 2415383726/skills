@@ -16,6 +16,7 @@ import uuid
 
 import provenance
 import guidance
+import names
 import report
 import workflow as wf
 
@@ -172,6 +173,9 @@ def normalize_response(document, manifest, job, raw):
     elif job['kind'] == 'consistency':
         candidates = raw.get('candidates')
         report.require(isinstance(candidates, list), 'candidates 必须是列表')
+        allowed = {b['id'] for b in payload['blocks']}
+        report.require(all(a['block_id'] in allowed for c in candidates for a in c.get('anchors', [])),
+                       '名称候选锚点不在本任务上下文内')
         base.update(task='consistency-result', checked=raw.get('checked'), merged_sha256=payload['merged_sha256'],
                     candidates=[dict(report.obj(c, 'candidate'), id='name-' + str(i + 1)) for i, c in enumerate(candidates)])
     else:
@@ -261,16 +265,44 @@ def advance(work, state, document, manifest):
     consistency = wf.load(work / 'consistency-input.json')
     report.require(state['consistency_input'] == wf.sha(consistency), '名称索引已变化')
     if consistency['required']:
-        if consistency['terms']:
-            create_job(work, state, 'consistency', 'consistency', work / 'consistency-input.json', work / 'consistency-result.json')
-            if consistency.get('budget_exceeded') and state['jobs']['consistency']['status'] == 'pending':
-                skip_job(state['jobs']['consistency'], '名称索引超出输入预算，未执行名称一致性检查')
-            if not all_complete(state, 'consistency'):
-                return 'consistency'
-        elif not (work / 'consistency-result.json').exists():
+        if 'consistency_plan' not in state:
+            packets = names.plan(consistency, state.get('consistency_budget', wf.policy.CONSISTENCY_INPUT_CHARS))
+            plan = []
+            for i, packet in enumerate(packets):
+                task_id = 'consistency' if i == 0 else 'consistency-{:03d}'.format(i + 1)
+                path = work / 'consistency-batches' / (task_id + '.json')
+                save(path, packet, path.exists())
+                plan.append({'id': task_id, 'path': str(path), 'sha256': wf.sha(packet)})
+            state['consistency_plan'] = plan
+        for batch in state['consistency_plan']:
+            payload = wf.load(batch['path'])
+            report.require(wf.sha(payload) == batch['sha256'], '名称检查输入发生变化')
+            create_job(work, state, batch['id'], 'consistency', Path(batch['path']),
+                       work / 'consistency-parts' / (batch['id'] + '.json'))
+            if (len(json.dumps(payload, ensure_ascii=False, indent=2)) > payload['max_input_chars']
+                    and state['jobs'][batch['id']]['status'] == 'pending'):
+                skip_job(state['jobs'][batch['id']], '名称比较组超出输入预算，该组未检查')
+        if not all_complete(state, 'consistency'):
+            return 'consistency'
+        combined, notes, executions = [], list(consistency.get('coverage_notes', [])), []
+        for batch in state['consistency_plan']:
+            job = state['jobs'][batch['id']]
+            if job['status'] == 'skipped':
+                notes.append('全文名称一致性检查尚未完成：部分名称比较组已跳过。')
+                notes.append(job['id'] + '：' + job['skip_reason'])
+                continue
+            part = wf.load(job['canonical_path'])
+            notes.extend(part['limitations'])
+            executions.append(part.get('execution', {}))
+            for candidate in part['candidates']:
+                combined.append(dict(candidate, id='name-' + str(len(combined) + 1)))
+        if not (work / 'consistency-result.json').exists():
             save(work / 'consistency-result.json', {
                 'schema_version': wf.SCHEMA, 'task': 'consistency-result', 'document_sha256': wf.sha(document),
-                'merged_sha256': state['merged'], 'checked': True, 'candidates': [], 'limitations': []})
+                'merged_sha256': wf.sha(wf.load(work / 'merged.json')), 'checked': True,
+                'candidates': combined, 'limitations': list(dict.fromkeys(notes)),
+                'complete': all(state['jobs'][b['id']]['status'] == 'complete' for b in state['consistency_plan']),
+                'executions': executions, 'coverage': consistency.get('coverage', {})})
     if not state.get('review_plan'):
         invoke(wf.review_plan_command, document=str(work / 'document.json'), manifest=str(work / 'batches' / 'manifest.json'),
                merged=str(work / 'merged.json'), consistency_result=str(work / 'consistency-result.json') if consistency['required'] and (work / 'consistency-result.json').is_file() else None,
@@ -329,9 +361,9 @@ def task_prompt(job):
             '不读取其他检查结果、测评答案或整个工作目录，不改原文。'
             '按指引写结果后用 {} 提交：{}\n'
             '定位或字段错误在本任务局部修正，最多连续3次；不猜定位、不删除真实发现凑通过。'
-            '提交成功只回“{} submitted”；无法继续只回“{} blocked 简短类别”。不调度、不写报告。').format(
+            '结束消息严格遵守任务指引中的回传约定；本任务 ID：{}。不调度、不写报告。').format(
                 role, job['guidance_path'], job['input_path'], job['response_path'] + '.body',
-                shell, command, job['id'], job['id'])
+                shell, command, job['id'])
 
 
 def publish_response(target, raw):
@@ -495,21 +527,40 @@ def submit(job_path, body_path):
     print(json.dumps(response, ensure_ascii=False))
 
 
+def delivery_summary(work, document):
+    from collections import Counter
+    review = wf.load(work / 'review.json')
+    return {'severity': {level: sum(f['severity'] == level for f in review['findings']) for level in ('confirmed', 'pending')},
+            'categories': dict(Counter(f['category'] for f in review['findings'])),
+            'scope': ('仅名称一致性补查；原提取范围：' if review.get('names_only') else '') + document['scope'],
+            'coverage': {'units_total': len(report.document_units(document)),
+                         'checked_by_pass': {p['id']: len(p['checked_block_ids']) for p in review['passes']},
+                         'names_only': bool(review.get('names_only'))},
+            'limitations': list(dict.fromkeys(document['limitations'] + review['limitations'])),
+            'initial_candidate_hits': review.get('process_statistics', {}).get('initial_candidates', {}),
+            'notice': '单双路命中是初检候选统计，不是正确率或逐条可信度。'}
+
+
 def simple_step(result):
     """Small coordinator interface; detailed state remains available via status."""
     action = {'dispatch_ready': 'dispatch', 'resolve_errors': 'repair',
               'deliver_report': 'deliver', 'wait_for_workers': 'wait'}[result['next_action']]
-    answer = {'action': action, 'phase': result['phase'], 'concurrency': result['concurrency']}
+    answer = {'action': action, 'phase': result['phase'], 'concurrency': result['concurrency'],
+              'progress': result.get('pipeline', []), 'notes': result.get('notes', []),
+              'stalled': result.get('stalled', [])}
+    if answer['stalled']:
+        answer['recovery'] = '核对宿主任务句柄；确认尚未启动后执行 step --resume-assigned。不要把启动慢当失败，不自动跳过。'
     if action == 'dispatch':
         answer['tasks'] = result['ready']
         occupied = len(result['running']) + len(result['assigned'])
         answer['capacity'] = {'limit': result['concurrency'], 'occupied': occupied,
                               'available': max(0, result['concurrency'] - occupied)}
-        answer['instruction'] = '本次交接 {} 个任务；含本次预留共占用 {}/{} 槽位。返回一个也正常，只补空位；原样派发 prompt，不另写包装。'.format(len(result['ready']), occupied, result['concurrency'])
+        answer['instruction'] = '本次交接 {} 个任务；含本次预留共占用 {}/{} 槽位。先派发本次全部任务再等待，不逐个等待完成；返回一个也正常，只补空位。原样派发 prompt，不另写包装。'.format(len(result['ready']), occupied, result['concurrency'])
     elif action == 'repair':
         answer['errors'] = result['errors']
-        answer['instruction'] = '按 references/recovery.md 处理；不要重新校对整篇。'
+        answer['instruction'] = '按 references/recovery.md 处理；若 stalled 非空，先核对宿主是否已启动再恢复交接。不要重查正文或后台循环重试。'
     elif action == 'deliver':
+        answer['summary'] = result.get('summary', {})
         answer['report_path'] = result['report_path']
     else:
         answer['wait_command'] = result['wait_command']
@@ -567,11 +618,11 @@ def next_tasks(work, state, phase, compact=False, resume_assigned=False):
                 job['assigned_at'] = now()
             if compact:
                 ready.append({'id': job['id'], 'executor': job['executor'],
-                              'action': 'spawn_fresh_context',
+                              'launch_mode': 'spawn_fresh_context',
                               'prompt': handoff_prompt(job)})
             else:
                 ready.append({'id': job['id'], 'job_path': job['job_path'], 'executor': job['executor'],
-                              'action': 'spawn_fresh_context',
+                              'launch_mode': 'spawn_fresh_context',
                               'submit_argv': submit_argv(job), 'prompt': handoff_prompt(job)})
             if not replay:
                 assigned.append(job['id'])
@@ -619,6 +670,7 @@ def status_snapshot(work):
                      'context_id': evidence['context_id'], 'context_source': evidence['context_source'],
                      'ticket_created_at': job.get('ticket_created_at'), 'assigned_at': job.get('assigned_at'),
                      'opened_at': evidence['opened_at'],
+                     **({'skip_reason': job['skip_reason']} if job.get('skip_reason') else {}),
                      'ticket_age_seconds': age_seconds(job.get('ticket_created_at'), observed_at),
                      'assigned_age_seconds': age_seconds(job.get('assigned_at'), observed_at),
                      'open_age_seconds': age_seconds(evidence['opened_at'], observed_at),
@@ -637,25 +689,36 @@ def status_snapshot(work):
                 total = 2 * len(wf.load(work / 'batches' / 'manifest.json')['batches'])
             elif kind == 'consistency':
                 payload = wf.load(work / 'consistency-input.json')
-                total = int(bool(payload['required'] and payload['terms']))
+                total = len(state.get('consistency_plan', []))
             else:
                 total = len(wf.load(work / 'review-input' / 'manifest.json')['batches'])
         complete = sum(j['status'] == 'complete' for j in subset) if planned else None
         skipped = sum(j['status'] == 'skipped' for j in subset) if planned else 0
         stage_status = ('finished_with_skips' if planned and skipped and total == complete + skipped else 'not_planned' if not planned else 'complete' if total == complete else 'in_progress')
-        phases.append({'phase': kind, 'status': stage_status, 'total': total, 'complete': complete, 'skipped': skipped})
+        if kind == 'proofread' and state.get('names_only'):
+            total, complete, stage_status = 0, 0, 'not_run_names_only'
+        phases.append({'phase': kind, 'status': stage_status, 'total': total, 'complete': complete, 'skipped': skipped,
+                       **{key: sum(j['status'] == key for j in subset) for key in
+                          ('pending', 'assigned', 'running', 'response_pending', 'invalid')}})
     phases.append({'phase': 'report', 'status': 'complete' if phase == 'done' else 'pending',
                    'total': 1, 'complete': int(phase == 'done')})
+    occupied = sum(j['status'] in ('assigned', 'running', 'response_pending') for j in jobs)
+    stalled = [{'id': j['id'], 'assigned_age_seconds': j['assigned_age_seconds']}
+               for j in jobs if j['status'] == 'assigned' and j['opened_at'] is None
+               and j['assigned_age_seconds'] is not None and j['assigned_age_seconds'] >= 90]
+    notes = [j['id'] + '：' + j.get('skip_reason', '任务已跳过') for j in jobs if j['status'] == 'skipped']
+    actionable = (any(j['status'] in ('invalid', 'response_pending') for j in jobs)
+                  or any(j['status'] == 'pending' for j in jobs) and occupied < state['concurrency']
+                  or not any(j['status'] in ('pending', 'assigned', 'running') for j in jobs))
     return {'initialized': True, 'observed_at': observed_at.isoformat(), 'phase': phase,
             'concurrency': state['concurrency'], 'coordinator': state.get('coordinator'),
             'last_reconciliation': state.get('last_reconciliation'),
             'jobs': jobs, 'phases': phases, 'reconciliation_required': any(
                 j['status'] != j['saved_status'] or j['status'] == 'response_pending' for j in jobs),
-            'action': 'inspect_errors' if any(j['status'] == 'invalid' for j in jobs)
-                      else 'coordinator_next' if any(j['status'] in ('pending', 'response_pending') for j in jobs)
+            'stalled': stalled, 'notes': notes,
+            'action': 'inspect_errors' if any(j['status'] == 'invalid' for j in jobs) or stalled
                       else 'done' if phase == 'done'
-                      else 'wait_or_confirm_interruption' if any(j['status'] in ('assigned', 'running') for j in jobs)
-                      else 'coordinator_next',
+                      else 'coordinator_next' if actionable else 'wait_or_confirm_interruption',
             **({'report_path': str(work / '校对报告.html')} if phase == 'done' else {})}
 
 
@@ -666,22 +729,26 @@ def wait_for_change(work, timeout):
     initial = None
     while True:
         snapshot = status_snapshot(work)
+        details = {key: snapshot.get(key, []) for key in ('stalled', 'notes')}
+        details['progress'] = snapshot.get('phases', [])
+        if details['stalled']:
+            return dict(details, action='repair', instruction='预留任务超过90秒仍未领取；核对宿主句柄，确认未启动后执行 step --resume-assigned，不自动跳过或后台循环。')
         # Starting a reserved worker consumes no new slot and needs no coordinator action.
         signature = [(j['id'], j['ticket'], 'active' if j['status'] in ('assigned', 'running') else j['status'])
                      for j in snapshot['jobs']]
         if snapshot.get('action') != 'wait_or_confirm_interruption' or (initial is not None and signature != initial):
-            return {'action': 'step', 'instruction': '立即执行 step 接收结果并补充空闲槽位。'}
+            return dict(details, action='step', instruction='执行一次 step 接收结果并补充空闲槽位；完整读取并处理返回 JSON。')
         initial = signature
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            return {'action': 'wait', 'instruction': '仍在执行；继续等待任意完成事件或再次运行本命令，不把超时当作失败。'}
+            return dict(details, action='wait', instruction='尚无可推进事件；交还控制权等待完成通知，无通知时再次执行本命令。不要后台串联 step/wait 或把超时当失败。')
         time.sleep(min(0.5, remaining))
 
 
 def main():
     parser = argparse.ArgumentParser(description='本地任务清单：脚本组织数据，宿主 Agent 调用子代理。next 会预留返回的任务。')
     commands = parser.add_subparsers(dest='command', required=True)
-    nxt = commands.add_parser('next', aliases=['step'], help='step 提供主 Agent 的精简动作接口')
+    nxt = commands.add_parser('step', aliases=['next'], help='step 提供主 Agent 的精简动作接口')
     nxt.add_argument('--work', required=True)
     nxt.add_argument('--coordinator', required=True, help='本协调会话的稳定真实标识')
     nxt.add_argument('--takeover', action='store_true', help='显式接管其他协调员，保留已分配/运行任务')
@@ -773,7 +840,7 @@ def main():
                 max_chars = args.max_chars if args.max_chars is not None else 2000
                 report.require(0 < target_chars <= max_chars, '字符阈值须满足 0 < target-chars <= max-chars')
                 state = {'document_sha256': wf.sha(document), 'rules_sha256': wf.rules_sha(), 'jobs': {},
-                         'concurrency': 4, 'target_chars': target_chars, 'max_chars': max_chars}
+                         'concurrency': 8, 'target_chars': target_chars, 'max_chars': max_chars}
                 claim_coordinator(work, state, args.coordinator, args.takeover)
                 save(state_path, state)
             if 'manifest_sha256' not in state:
@@ -784,7 +851,7 @@ def main():
             manifest = wf.load(work / 'batches' / 'manifest.json')
             wf.validate_manifest(document, manifest)
             report.require(state['manifest_sha256'] == wf.sha(manifest), '批次清单发生变化')
-            for batch in manifest['batches']:
+            for batch in ([] if state.get('names_only') else manifest['batches']):
                 for pid in ('A', 'B'):
                     create_job(work, state, pid + '-' + batch['id'], 'proofread', work / 'batches' / batch['file'],
                                work / 'results' / pid / (batch['id'] + '.json'), pid)
@@ -826,9 +893,11 @@ def main():
             finally:
                 save(state_path, state, state_path.exists())
             snapshot = status_snapshot(work)
-            result.update(pipeline=snapshot['phases'], coordinator=state['coordinator']['id'],
+            if phase == 'done':
+                result['summary'] = delivery_summary(work, document)
+            result.update(pipeline=snapshot['phases'], notes=snapshot['notes'], stalled=snapshot['stalled'], coordinator=state['coordinator']['id'],
                           accepted_this_step=len(newly_complete),
-                          next_action='dispatch_ready' if result['ready'] else 'resolve_errors' if result['errors']
+                          next_action='dispatch_ready' if result['ready'] else 'resolve_errors' if result['errors'] or snapshot['stalled']
                           else 'deliver_report' if phase == 'done' else 'wait_for_workers')
             print(json.dumps(simple_step(result) if simple else result,
                              ensure_ascii=False, indent=None if args.compact else 2))

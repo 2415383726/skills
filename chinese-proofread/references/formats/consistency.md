@@ -13,6 +13,8 @@
 }
 ```
 
+输入 terms 按原文 text 去重，kind 统一为“名称”。occurrences 只保留 block_id 和 occurrence；名称原字取自 term.text，位置及完整上下文从 blocks 按 id 关联。
+
 只返回 pending；不改写正确名称。quote 精确取自索引原文，重复片段照索引填写 occurrence（从1起算）。无具体矛盾时 candidates=[]。checked=true 声明本次输入已检查；输入不完整时如实标记并填写 limitations。
 
 结果写入指定 .json.body，执行任务给定的 submit 命令，成功才结束。不写票据、哈希或报告。

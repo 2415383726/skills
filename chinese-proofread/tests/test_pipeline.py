@@ -145,7 +145,8 @@ class PipelineTests(unittest.TestCase):
 
     def test_eight_parallel_submissions_and_consistency(self):
         self.prepare('\n'.join('综合处负责报送材料。' + '各单位应认真核对相关内容。' * 100 for _ in range(4)))
-        dispatch = self.step('--concurrency', '8')
+        dispatch = self.step()
+        self.assertEqual(dispatch['concurrency'], 8)
         self.assertEqual(len(dispatch['tasks']), 8)
         calls = [self.open_body(task) for task in dispatch['tasks']]
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
@@ -259,7 +260,7 @@ class PipelineTests(unittest.TestCase):
         self.command('tasks.py', 'submit', '--job', old_job, '--body', old_body, ok=False)
         self.complete(other)
         for task in self.step()['tasks']:
-            self.assertEqual(task['action'], 'spawn_fresh_context')
+            self.assertEqual(task['launch_mode'], 'spawn_fresh_context')
             self.complete(task)
         self.assertEqual(self.step()['action'], 'deliver')
         review = json.loads((self.work / 'review.json').read_text())

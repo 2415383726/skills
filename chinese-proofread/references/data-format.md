@@ -51,3 +51,11 @@ task-state.json 保存调度状态，不要求 Agent 手工编辑；用 status �
 manifest.consistency_required 决定名称阶段，long_document 仅保留分块兼容信息，不决定报告形式。复核 manifest 记录 max_input_chars、每批 input_chars / budget_exceeded；超限不可拆分组不派发、不发布其未复核候选。提取 ready 同时返回 scope 和 limitations，聊天交付也必须保留实际范围限制。
 
 jobs/*.guidance.md 由 scripts/guidance.py 组装。角色只读该文件和任务 input_path；jobs 元数据中的 guidance_sources 供维护追踪，不要求模型再读源文件。指引正文哈希保存在状态中，open/submit 时验证。
+
+调度顶层 action 表示 dispatch/wait/repair/deliver；任务创建方式使用 tasks[].launch_mode，不再使用任务级 action。适配器必须解析 JSON 层级。progress 为分阶段计数，total=null 表示未规划；notes 为跳过原因；stalled 为长期未领取任务，不包含校对正文。wait 也可能返回 repair，不能继续无条件循环等待。
+
+名称索引 terms 按 text 去重，kind 统一为“名称”；occurrences 仅保留 block_id/occurrence，顶层 blocks 保存去重的完整原文单元。consistency-batches 保存按字符预算生成的比较任务，consistency-parts 保存各结果，consistency-result.json 为经过校验的汇总。coverage 区分至少一路完成采集的批次数、各路完整提交及两路均缺失批次；空术语表不等于模型已收齐所有名称。
+
+summary 只含数量、覆盖和限制，不含候选明细。名称补查工作区 names_only=true，保留 reused_from 指向原目录；不创建初检任务，独立报告明确补查范围。
+
+名称汇总结果的 complete 明示是否所有比较任务完成；checked 表示已收集并校验可用结果，不用它掩盖分组跳过。executions 保留各名称检查任务的执行记录，测评仅在 complete=true 时给出完整名称阶段评分。

@@ -316,10 +316,15 @@ def stage_metrics(document, review, expected, predictions, pending, work):
     if consistency is not None:
         if consistency.get('checked') is True:
             consistency_candidates, _ = wf.load_consistency(document, fingerprint, root/'consistency-result.json', required, wf.sha(merged))
-            consistency_complete = True
-            timing_records['consistency'].append(execution_timing(consistency))
+            consistency_complete = consistency.get('complete', True) is True
+            records = consistency.get('executions')
+            if records is None:
+                timing_records['consistency'].append(execution_timing(consistency))
+            else:
+                timing_records['consistency'].extend(execution_timing({'execution': record}) for record in records)
             effects, count = candidate_effects(units, consistency_candidates)
-            stages['consistency'] = stage_score(effects, expected, count)
+            if consistency_complete:
+                stages['consistency'] = stage_score(effects, expected, count)
         else:
             consistency_complete = False
     finish_timing('consistency', timing_records['consistency'], consistency_complete)

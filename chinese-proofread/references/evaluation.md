@@ -107,7 +107,7 @@ python3 scripts/evaluate.py annotation-template --document /absolute/path/docume
 | variant | 给予运行模型的内容与执行方式 |
 | --- | --- |
 | no-skill | 原文及“仅校对文字和标点，不润色”的请求；不加载技能规则、角色文件或示例 |
-| single-pass | 原文与 guidance.py 生成的初检指引；一个新上下文完成一次检查 |
+| single-pass | 原文与 guidance.py --standalone 生成的初检指引；一个新上下文完成一次检查 |
 | single-review | 与 single-pass 相同的初检；另一个新上下文按复核规则处理其候选，隐藏初检理由 |
 | dual-review | 使用本技能正常严格流水线，包括名称一致性和候选复核 |
 
